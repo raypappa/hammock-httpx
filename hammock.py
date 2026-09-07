@@ -25,6 +25,7 @@ class Hammock:
         "delete",
         "trace",
         "connect",
+        "query",
     ]
 
     _name: str | None

@@ -267,6 +267,7 @@ class TestHammockSession(unittest.TestCase):
             "HEAD",
             "TRACE",
             "CONNECT",
+            "QUERY",
         ]:
             self.assertTrue(hasattr(api, method))
             with mock.patch.object(api, "_request") as mk:

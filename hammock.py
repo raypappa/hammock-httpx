@@ -14,7 +14,17 @@ __all__ = ["Hammock"]
 class Hammock:
     """Chainable, magical class helps you make requests to RESTful services"""
 
-    HTTP_METHODS: list[str] = ["get", "options", "head", "post", "put", "patch", "delete"]
+    HTTP_METHODS: list[str] = [
+        "get",
+        "options",
+        "head",
+        "post",
+        "put",
+        "patch",
+        "delete",
+        "trace",
+        "connect",
+    ]
 
     _name: str | None
     _parent: Hammock | None

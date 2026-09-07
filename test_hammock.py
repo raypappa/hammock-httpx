@@ -240,7 +240,17 @@ class TestHammockSession(unittest.TestCase):
     def test_http_methods_are_uppercase_on_class(self):
         # bind_method creates upper case methods that call _request
         api = Hammock(self.BASE)
-        for method in ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"]:
+        for method in [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "PATCH",
+            "OPTIONS",
+            "HEAD",
+            "TRACE",
+            "CONNECT",
+        ]:
             self.assertTrue(hasattr(api, method))
             with mock.patch.object(api, "_request") as mk:
                 getattr(api, method)("foo")

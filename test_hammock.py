@@ -139,7 +139,7 @@ class TestHammockUrlBuilding(unittest.TestCase):
             self.assertEqual(args[0], "get")
             self.assertEqual(args[1], f"{self.BASE}/users/foo/bar/baz")
             self.assertEqual(kwargs["params"], {"q": 1})
-            self.assertEqual(kwargs.get("allow_redirects"), False)
+            self.assertEqual(kwargs.get("follow_redirects"), False)
 
     def test_repr_equals_url(self):
         api = Hammock(self.BASE)
@@ -173,29 +173,37 @@ class TestHammockSession(unittest.TestCase):
 
     def test_session_headers_update_not_replace(self):
         api = Hammock(self.BASE, headers={"Accept": "application/json", "X-Custom": "a"})
-        # Hammock's current implementation uses isinstance(orig, dict) check;
-        # requests' CaseInsensitiveDict is not a plain dict, so headers are replaced,
-        # not merged. Verify the passed keys are present.
+        # headers should be merged (httpx preserves defaults via update)
         self.assertEqual(api._session.headers.get("Accept"), "application/json")
         self.assertEqual(api._session.headers.get("X-Custom"), "a")
+        # User-Agent should still be present (httpx merges via update)
+        self.assertIn("User-Agent", api._session.headers)
+        self.assertIn("user-agent", api._session.headers)
         # Verify that without headers kwarg, session has default User-Agent
         api2 = Hammock(self.BASE)
         self.assertIn("User-Agent", api2._session.headers)
 
     def test_session_auth_set(self):
         api = Hammock(self.BASE, auth=("user", "pass"))
-        self.assertEqual(api._session.auth, ("user", "pass"))
+        # httpx stores auth as BasicAuth object
+        import httpx
+
+        self.assertIsInstance(api._session.auth, httpx.BasicAuth)
+        # basic check that auth was set (not None)
+        self.assertIsNotNone(api._session.auth)
 
     def test_session_scalar_kwargs(self):
-        # verify attribute exists on Session and can be overridden
-        api2 = Hammock(self.BASE, verify=False)
-        self.assertFalse(api2._session.verify)
-        # max_redirects is a valid Session scalar
-        api4 = Hammock(self.BASE, max_redirects=5)
-        self.assertEqual(api4._session.max_redirects, 5)
-        # stream or trust_env etc
-        api5 = Hammock(self.BASE, stream=True)
-        self.assertTrue(api5._session.stream)
+        # verify max_redirects and follow_redirects are valid httpx Client scalars
+        api2 = Hammock(self.BASE, max_redirects=5)
+        self.assertEqual(api2._session.max_redirects, 5)
+        api3 = Hammock(self.BASE, follow_redirects=True)
+        self.assertTrue(api3._session.follow_redirects)
+        # timeout is also configurable via httpx
+        api4 = Hammock(self.BASE, timeout=10.0)
+        self.assertEqual(api4._session.timeout.read, 10.0)
+        # headers scalar through dict update still works
+        api5 = Hammock(self.BASE, headers={"X-A": "1"})
+        self.assertEqual(api5._session.headers.get("X-A"), "1")
 
     def test_invalid_session_kwarg_raises(self):
         with self.assertRaises(AttributeError):
@@ -238,7 +246,7 @@ class TestHammockSession(unittest.TestCase):
             mocked.assert_called_once_with(
                 "post",
                 f"{self.BASE}/foo/bar",
-                allow_redirects=False,
+                follow_redirects=False,
                 json={"x": 1},
                 headers={"X-A": "b"},
             )
@@ -278,27 +286,31 @@ class TestHammockSession(unittest.TestCase):
         self.assertEqual(child.custom, "value")
 
     def test_custom_session_kwarg(self):
-        import requests
+        import httpx
 
-        sess = requests.Session()
-        sess.headers.update({"X-Sess": "1"})
+        sess = httpx.Client(headers={"X-Sess": "1"})
         api = Hammock(self.BASE, session=sess)
         self.assertIs(api._session, sess)
+        self.assertIs(api._client, sess)
         # chaining shares the same session
         self.assertIs(api.foo._session, sess)
         self.assertIs(api.foo.bar._session, sess)
         # kwargs still applied to provided session
-        sess2 = requests.Session()
+        sess2 = httpx.Client()
         api2 = Hammock(self.BASE, session=sess2, headers={"X-New": "2"})
         self.assertIs(api2._session, sess2)
         self.assertEqual(api2._session.headers.get("X-New"), "2")
+        # also test client alias
+        sess3 = httpx.Client()
+        api3 = Hammock(self.BASE, client=sess3)
+        self.assertIs(api3._session, sess3)
         # request uses the custom session
         with mock.patch.object(sess, "request") as m:
             m.return_value = mock.Mock(status_code=200, headers={}, url=f"{self.BASE}/foo")
             api.foo.GET()
             m.assert_called_once()
             self.assertEqual(m.call_args[0][1], f"{self.BASE}/foo")
-            self.assertEqual(m.call_args[1].get("allow_redirects"), False)
+            self.assertEqual(m.call_args[1].get("follow_redirects"), False)
 
 
 class TestResourceUri(unittest.TestCase):
@@ -429,8 +441,12 @@ class TestRedirectVerbPreservation(unittest.TestCase):
             resp = api.foo.POST(allow_redirects=False)
             m.assert_called_once()
             self.assertEqual(resp, redirect_resp)
-            # should be called with allow_redirects=False
-            self.assertEqual(m.call_args[1].get("allow_redirects"), False)
+            self.assertEqual(m.call_args[1].get("follow_redirects"), False)
+        # also follow_redirects alias
+        with mock.patch.object(api._session, "request", return_value=redirect_resp) as m:
+            resp = api.foo.POST(follow_redirects=False)
+            m.assert_called_once()
+            self.assertEqual(m.call_args[1].get("follow_redirects"), False)
 
     def test_relative_redirect_resolved(self):
         api = Hammock(self.BASE)

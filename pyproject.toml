@@ -26,7 +26,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "requests>=1.1.0",
+    "httpx>=0.27",
 ]
 urls = { Homepage = "https://github.com/kadirpekel/hammock" }
 

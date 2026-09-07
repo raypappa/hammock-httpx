@@ -130,13 +130,16 @@ class TestHammockUrlBuilding(unittest.TestCase):
     def test_url_with_extra_args_via_method(self):
         api = Hammock(self.BASE)
         with mock.patch.object(api._session, "request") as m:
-            m.return_value = mock.Mock()
+            m.return_value = mock.Mock(
+                status_code=200, headers={}, url=f"{self.BASE}/users/foo/bar/baz"
+            )
             api.users.foo.GET("bar", "baz", params={"q": 1})
             m.assert_called_once()
             args, kwargs = m.call_args
             self.assertEqual(args[0], "get")
             self.assertEqual(args[1], f"{self.BASE}/users/foo/bar/baz")
             self.assertEqual(kwargs["params"], {"q": 1})
+            self.assertEqual(kwargs.get("allow_redirects"), False)
 
     def test_repr_equals_url(self):
         api = Hammock(self.BASE)
@@ -230,10 +233,14 @@ class TestHammockSession(unittest.TestCase):
     def test_request_forwards_kwargs_and_uses_url(self):
         api = Hammock(self.BASE)
         with mock.patch.object(api._session, "request") as mocked:
-            mocked.return_value = mock.Mock(status_code=200)
+            mocked.return_value = mock.Mock(status_code=200, headers={}, url=f"{self.BASE}/foo/bar")
             resp = api.foo.bar.POST(json={"x": 1}, headers={"X-A": "b"})
             mocked.assert_called_once_with(
-                "post", f"{self.BASE}/foo/bar", json={"x": 1}, headers={"X-A": "b"}
+                "post",
+                f"{self.BASE}/foo/bar",
+                allow_redirects=False,
+                json={"x": 1},
+                headers={"X-A": "b"},
             )
             self.assertEqual(resp.status_code, 200)
 
@@ -287,10 +294,11 @@ class TestHammockSession(unittest.TestCase):
         self.assertEqual(api2._session.headers.get("X-New"), "2")
         # request uses the custom session
         with mock.patch.object(sess, "request") as m:
-            m.return_value = mock.Mock(status_code=200)
+            m.return_value = mock.Mock(status_code=200, headers={}, url=f"{self.BASE}/foo")
             api.foo.GET()
             m.assert_called_once()
             self.assertEqual(m.call_args[0][1], f"{self.BASE}/foo")
+            self.assertEqual(m.call_args[1].get("allow_redirects"), False)
 
 
 class TestResourceUri(unittest.TestCase):
@@ -363,6 +371,80 @@ class TestResourceUri(unittest.TestCase):
         # ensure call interface strips correctly
         self.assertEqual(str(api("/foo")), f"{self.BASE}/foo")
         self.assertEqual(str(api("/foo/")), f"{self.BASE}/foo")
+
+
+class TestRedirectVerbPreservation(unittest.TestCase):
+    """Issue #21: redirect should not change POST to GET"""
+
+    BASE = "http://localhost:8000"
+
+    def test_post_preserved_on_302(self):
+        api = Hammock(self.BASE)
+        redirect_resp = mock.Mock(
+            status_code=302,
+            headers={"Location": f"{self.BASE}/redirected"},
+            url=f"{self.BASE}/foo",
+        )
+        final_resp = mock.Mock(status_code=200, headers={}, url=f"{self.BASE}/redirected")
+        with mock.patch.object(
+            api._session, "request", side_effect=[redirect_resp, final_resp]
+        ) as m:
+            resp = api.foo.POST(json={"x": 1})
+            self.assertEqual(resp, final_resp)
+            self.assertEqual(m.call_count, 2)
+            # first call POST to original url
+            self.assertEqual(m.call_args_list[0][0][0], "post")
+            self.assertEqual(m.call_args_list[0][0][1], f"{self.BASE}/foo")
+            # second call should still be POST to redirected url
+            self.assertEqual(m.call_args_list[1][0][0], "post")
+            self.assertEqual(m.call_args_list[1][0][1], f"{self.BASE}/redirected")
+            # json payload preserved
+            self.assertEqual(m.call_args_list[1][1].get("json"), {"x": 1})
+
+    def test_303_changes_to_get(self):
+        api = Hammock(self.BASE)
+        redirect_resp = mock.Mock(
+            status_code=303,
+            headers={"Location": f"{self.BASE}/other"},
+            url=f"{self.BASE}/foo",
+        )
+        final_resp = mock.Mock(status_code=200, headers={}, url=f"{self.BASE}/other")
+        with mock.patch.object(
+            api._session, "request", side_effect=[redirect_resp, final_resp]
+        ) as m:
+            resp = api.foo.POST(json={"x": 1}, data="body")
+            self.assertEqual(m.call_args_list[1][0][0], "get")
+            # body should be dropped for 303
+            self.assertNotIn("json", m.call_args_list[1][1])
+            self.assertNotIn("data", m.call_args_list[1][1])
+
+    def test_allow_redirects_false_no_follow(self):
+        api = Hammock(self.BASE)
+        redirect_resp = mock.Mock(
+            status_code=302,
+            headers={"Location": f"{self.BASE}/redirected"},
+            url=f"{self.BASE}/foo",
+        )
+        with mock.patch.object(api._session, "request", return_value=redirect_resp) as m:
+            resp = api.foo.POST(allow_redirects=False)
+            m.assert_called_once()
+            self.assertEqual(resp, redirect_resp)
+            # should be called with allow_redirects=False
+            self.assertEqual(m.call_args[1].get("allow_redirects"), False)
+
+    def test_relative_redirect_resolved(self):
+        api = Hammock(self.BASE)
+        redirect_resp = mock.Mock(
+            status_code=301,
+            headers={"Location": "/new-path"},
+            url=f"{self.BASE}/old",
+        )
+        final_resp = mock.Mock(status_code=200, headers={}, url=f"{self.BASE}/new-path")
+        with mock.patch.object(
+            api._session, "request", side_effect=[redirect_resp, final_resp]
+        ) as m:
+            api.foo.GET()
+            self.assertEqual(m.call_args_list[1][0][1], f"{self.BASE}/new-path")
 
 
 class TestHammockEdge(unittest.TestCase):

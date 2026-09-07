@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import typing as t
+from urllib.parse import urljoin
 
 import requests
 
@@ -45,8 +46,9 @@ class Hammock:
             name -- name of node
             parent -- parent node for chaining
             append_slash -- flag if you want a trailing slash in urls
-            session -- existing ``requests.Session`` to use (e.g. OAuth session); if None a new session is created
-            **kwargs -- ``requests`` session attributes to initiate with if available
+            session -- existing ``requests.Session`` to use (e.g. OAuth);
+                if None a new session is created
+            **kwargs -- ``requests`` session attributes to initiate
         """
         self._name = name
         self._parent = parent
@@ -132,8 +134,44 @@ class Hammock:
         return self._url()
 
     def _request(self, method: str, *args: t.Any, **kwargs: t.Any) -> Response:
-        """Makes the HTTP request using requests module"""
-        return self._session.request(method, self._url(*args), **kwargs)
+        """Makes the HTTP request using requests module
+
+        Handles redirects manually to preserve the original HTTP verb for
+        301/302 redirects (issue #21). ``requests`` would otherwise change
+        POST/PUT/PATCH to GET on 301/302, breaking RESTful interaction
+        (e.g. http -> https redirect). When ``allow_redirects`` is True
+        (default) we follow redirects ourselves preserving the verb; when
+        False we return the redirect response directly.
+        """
+        # Respect explicit allow_redirects=False — do not follow
+        allow_redirects = kwargs.pop("allow_redirects", True)
+        url = self._url(*args)
+        if not allow_redirects:
+            return self._session.request(method, url, allow_redirects=False, **kwargs)
+
+        # Follow redirects manually preserving method (except 303 -> GET)
+        resp = self._session.request(method, url, allow_redirects=False, **kwargs)
+        redirect_codes = (301, 302, 303, 307, 308)
+        max_redirects = getattr(self._session, "max_redirects", 30)
+        count = 0
+        # Use status_code check for redirect; avoid relying on is_redirect which
+        # is truthy for mocks (Mock.is_redirect is a Mock instance)
+        while resp.status_code in redirect_codes and count < max_redirects:
+            location = resp.headers.get("Location") if hasattr(resp.headers, "get") else None
+            if not location or not isinstance(location, str):
+                break
+            # 303 See Other — spec says change to GET
+            if resp.status_code == 303:
+                method = "get"
+                kwargs.pop("data", None)
+                kwargs.pop("json", None)
+                kwargs.pop("files", None)
+            # Resolve relative Location against current response URL
+            next_url = urljoin(getattr(resp, "url", None) or url, location)
+            url = next_url
+            resp = self._session.request(method, url, allow_redirects=False, **kwargs)
+            count += 1
+        return resp
 
 
 def bind_method(method: str) -> t.Callable[..., Response]:

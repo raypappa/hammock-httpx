@@ -21,6 +21,19 @@ class AsyncHammock(HammockBase):
     _client: AsyncClient  # type: ignore[name-defined]
     _session: AsyncClient  # alias for compat
 
+    if t.TYPE_CHECKING:
+
+        def GET(self, *args: t.Any, **kwargs: t.Any) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
+        def HEAD(self, *args: t.Any, **kwargs: t.Any) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
+        def OPTIONS(self, *args: t.Any, **kwargs: t.Any) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
+        def POST(self, *args: t.Any, **kwargs: t.Any) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
+        def PUT(self, *args: t.Any, **kwargs: t.Any) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
+        def PATCH(self, *args: t.Any, **kwargs: t.Any) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
+        def DELETE(self, *args: t.Any, **kwargs: t.Any) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
+        def TRACE(self, *args: t.Any, **kwargs: t.Any) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
+        def CONNECT(self, *args: t.Any, **kwargs: t.Any) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
+        def QUERY(self, *args: t.Any, **kwargs: t.Any) -> t.Awaitable[httpx.Response]: ...  # noqa: N802  # RFC 10008
+
     def __init__(
         self,
         name: str | None = None,

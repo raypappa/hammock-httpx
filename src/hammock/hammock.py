@@ -21,6 +21,20 @@ class Hammock(HammockBase):
     _session: Client  # httpx.Client, kept as _session for backward compat
     _client: Client
 
+    # --- typed verb stubs (runtime added via bind_method, here for type checkers) ---
+    if t.TYPE_CHECKING:
+
+        def GET(self, *args: t.Any, **kwargs: t.Any) -> Response: ...  # noqa: N802
+        def HEAD(self, *args: t.Any, **kwargs: t.Any) -> Response: ...  # noqa: N802
+        def OPTIONS(self, *args: t.Any, **kwargs: t.Any) -> Response: ...  # noqa: N802
+        def POST(self, *args: t.Any, **kwargs: t.Any) -> Response: ...  # noqa: N802
+        def PUT(self, *args: t.Any, **kwargs: t.Any) -> Response: ...  # noqa: N802
+        def PATCH(self, *args: t.Any, **kwargs: t.Any) -> Response: ...  # noqa: N802
+        def DELETE(self, *args: t.Any, **kwargs: t.Any) -> Response: ...  # noqa: N802
+        def TRACE(self, *args: t.Any, **kwargs: t.Any) -> Response: ...  # noqa: N802
+        def CONNECT(self, *args: t.Any, **kwargs: t.Any) -> Response: ...  # noqa: N802
+        def QUERY(self, *args: t.Any, **kwargs: t.Any) -> Response: ...  # noqa: N802  # RFC 10008
+
     def __init__(
         self,
         name: str | None = None,

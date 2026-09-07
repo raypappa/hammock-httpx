@@ -7,9 +7,9 @@ from urllib.parse import urljoin
 import httpx
 
 if t.TYPE_CHECKING:
-    from httpx import Client, Response
+    from httpx import AsyncClient, Client, Response
 
-__all__ = ["Hammock"]
+__all__ = ["Hammock", "AsyncHammock"]
 
 
 class Hammock:
@@ -236,3 +236,190 @@ def bind_method(method: str) -> t.Callable[..., Response]:
 
 for _method in Hammock.HTTP_METHODS:
     setattr(Hammock, _method.upper(), bind_method(_method))
+
+
+# ---------------------------------------------------------------------------
+# Async variant — mirrors Hammock but uses httpx.AsyncClient and async verbs
+# ---------------------------------------------------------------------------
+
+
+class AsyncHammock:
+    """Async chainable wrapper over ``httpx.AsyncClient``"""
+
+    HTTP_METHODS: list[str] = Hammock.HTTP_METHODS
+
+    _name: str | None
+    _parent: AsyncHammock | None
+    _append_slash: bool
+    _client: AsyncClient  # type: ignore[name-defined]
+    _session: AsyncClient  # alias for compat
+
+    def __init__(
+        self,
+        name: str | None = None,
+        parent: AsyncHammock | None = None,
+        append_slash: bool = False,
+        session: AsyncClient | None = None,  # type: ignore[name-defined]
+        client: AsyncClient | None = None,  # type: ignore[name-defined]
+        **kwargs: t.Any,
+    ) -> None:
+        self._name = name
+        self._parent = parent
+        self._append_slash = append_slash
+        _client = client if client is not None else session
+        if _client is not None:
+            self._client = _client  # type: ignore[assignment]
+            self._session = _client  # type: ignore[assignment]
+            for k, v in kwargs.items():
+                try:
+                    orig = getattr(self._client, k)
+                except AttributeError as exc:
+                    raise AttributeError(
+                        f"'{type(self._client).__name__}' has no attribute '{k}'"
+                    ) from exc
+                if (
+                    hasattr(orig, "update")
+                    and callable(orig.update)  # type: ignore[union-attr]
+                    and isinstance(v, dict)
+                ):
+                    try:
+                        orig.update(v)  # type: ignore[attr-defined]
+                    except Exception:
+                        try:
+                            setattr(self._client, k, v)
+                        except AttributeError as exc2:
+                            raise AttributeError(
+                                f"'{type(self._client).__name__}' has no attribute '{k}'"
+                            ) from exc2
+                else:
+                    try:
+                        setattr(self._client, k, v)
+                    except AttributeError as exc2:
+                        raise AttributeError(
+                            f"'{type(self._client).__name__}' has no attribute '{k}'"
+                        ) from exc2
+        else:
+            try:
+                self._client = httpx.AsyncClient(**kwargs)
+            except TypeError as exc:
+                raise AttributeError(str(exc)) from exc
+            self._session = self._client
+
+    def _spawn(self, name: str) -> AsyncHammock:
+        child: AsyncHammock = copy.copy(self)
+        if isinstance(name, str):
+            name = name.strip("/")
+        child._name = name
+        child._parent = self
+        return child
+
+    def __getattr__(self, name: str) -> AsyncHammock:
+        if name.startswith("__"):
+            raise AttributeError(name)
+        return self._spawn(name)
+
+    def __iter__(self) -> t.Iterator[AsyncHammock]:
+        current: AsyncHammock | None = self
+        while current:
+            if current._name:
+                yield current
+            current = current._parent
+
+    def _chain(self, *args: t.Any) -> AsyncHammock:
+        chain: AsyncHammock = self
+        for arg in args:
+            chain = chain._spawn(str(arg))
+        return chain
+
+    async def _aclose(self) -> None:
+        """Async close of the underlying client"""
+        if getattr(self, "_client", None):
+            await self._client.aclose()
+
+    def _close_session(self) -> None:  # pragma: no cover - sync close not used for async
+        """Sync close fallback (closes via async loop if needed)"""
+        # httpx.AsyncClient should be closed via aclose; try sync close if available
+        try:
+            import asyncio
+
+            # run aclose if loop is available, otherwise skip
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(self._client.aclose())
+            else:
+                loop.run_until_complete(self._client.aclose())
+        except Exception:
+            pass
+
+    def __call__(self, *args: t.Any) -> AsyncHammock:
+        return self._chain(*args)
+
+    def _url(self, *args: t.Any) -> str:
+        path_comps: list[str] = [
+            mock._name for mock in self._chain(*args) if mock._name is not None
+        ]  # type: ignore[misc]
+        url: str = "/".join(reversed(path_comps))
+        if self._append_slash:
+            url = url + "/"
+        return url
+
+    def __repr__(self) -> str:
+        return self._url()
+
+    async def _request(self, method: str, *args: t.Any, **kwargs: t.Any) -> httpx.Response:
+        follow_redirects: bool | None = None
+        if "follow_redirects" in kwargs:
+            follow_redirects = kwargs.pop("follow_redirects")
+        if "allow_redirects" in kwargs:
+            allow = kwargs.pop("allow_redirects")
+            if follow_redirects is None:
+                follow_redirects = bool(allow)
+        if follow_redirects is None:
+            follow_redirects = True
+
+        url = self._url(*args)
+        if not follow_redirects:
+            return await self._client.request(method, url, follow_redirects=False, **kwargs)
+
+        resp = await self._client.request(method, url, follow_redirects=False, **kwargs)
+        redirect_codes = (301, 302, 303, 307, 308)
+        max_redirects = getattr(self._client, "max_redirects", 20)
+        count = 0
+        while resp.status_code in redirect_codes and count < max_redirects:
+            location = resp.headers.get("Location") if hasattr(resp.headers, "get") else None
+            if not location or not isinstance(location, str):
+                break
+            if resp.status_code == 303:
+                method = "get"
+                kwargs.pop("data", None)
+                kwargs.pop("json", None)
+                kwargs.pop("content", None)
+                kwargs.pop("files", None)
+            next_url = urljoin(getattr(resp, "url", None) and str(resp.url) or url, location)
+            url = next_url
+            resp = await self._client.request(method, url, follow_redirects=False, **kwargs)
+            count += 1
+        return resp
+
+    # Async context manager support
+    async def __aenter__(self) -> AsyncHammock:
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb) -> None:
+        await self._client.aclose()
+
+    # Alias for close
+    async def close(self) -> None:
+        await self._client.aclose()
+
+
+def _bind_async_method(method: str) -> t.Callable[..., t.Awaitable[httpx.Response]]:
+    async def aux(hammock: AsyncHammock, *args: t.Any, **kwargs: t.Any) -> httpx.Response:
+        return await hammock._request(method, *args, **kwargs)
+
+    aux.__name__ = method.upper()
+    return aux
+
+
+for _method in AsyncHammock.HTTP_METHODS:
+    setattr(AsyncHammock, _method.upper(), _bind_async_method(_method))

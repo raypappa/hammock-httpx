@@ -50,6 +50,7 @@ py-modules = ["hammock"]
 testpaths = ["."]
 python_files = ["test_*.py"]
 addopts = "-v"
+asyncio_mode = "auto"
 
 [tool.ruff]
 line-length = 100
@@ -71,6 +72,7 @@ dev = [
     "pytest>=7",
     "mypy>=1.0",
     "ruff>=0.8",
+    "pytest-asyncio>=1.2.0",
 ]
 
 [tool.uv]

@@ -64,6 +64,10 @@ class Hammock:
             name -- name of child
         """
         child: Hammock = copy.copy(self)
+        # Strip leading/trailing slashes to allow resource URIs like '/api/v1/users/4711/'
+        # to be used directly without producing double slashes (PR #13, #16).
+        if isinstance(name, str):
+            name = name.strip("/")
         child._name = name
         child._parent = self
         return child

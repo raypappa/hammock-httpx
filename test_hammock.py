@@ -271,6 +271,59 @@ class TestHammockSession(unittest.TestCase):
         self.assertEqual(child.custom, "value")
 
 
+class TestResourceUri(unittest.TestCase):
+    """PR #13: allow resource URIs with leading/trailing slashes"""
+
+    BASE = "http://localhost:8000"
+    PATH = "/sample/path/to/resource"
+    URL = BASE + PATH
+
+    @httprettified
+    def test_strip_leading_slash_via_call(self):
+        HTTPretty.register_uri(HTTPretty.GET, self.URL)
+        client = Hammock(self.BASE)
+        # resource URI with leading slash via __call__
+        self.assertEqual(str(client(self.PATH)), self.URL)
+        resp = client(self.PATH).GET()
+        self.assertEqual(HTTPretty.last_request.path, self.PATH)
+
+    @httprettified
+    def test_strip_both_slashes(self):
+        HTTPretty.register_uri(HTTPretty.GET, self.URL)
+        client = Hammock(self.BASE)
+        self.assertEqual(str(client(self.PATH + "/")), self.URL)
+        resp = client(self.PATH + "/").GET()
+        self.assertEqual(HTTPretty.last_request.path, self.PATH)
+
+    @httprettified
+    def test_strip_with_append_slash(self):
+        HTTPretty.register_uri(HTTPretty.GET, self.URL + "/")
+        client = Hammock(self.BASE, append_slash=True)
+        # strip then append_slash should yield trailing slash
+        resp = client(self.PATH).GET()
+        self.assertEqual(HTTPretty.last_request.path, self.PATH + "/")
+        resp = client(self.PATH + "/").GET()
+        self.assertEqual(HTTPretty.last_request.path, self.PATH + "/")
+
+    def test_strip_internal_slashes_preserved(self):
+        api = Hammock(self.BASE)
+        self.assertEqual(str(api("/api/v1/users/4711/")), f"{self.BASE}/api/v1/users/4711")
+        self.assertEqual(str(api("/a/b/c/")), f"{self.BASE}/a/b/c")
+        # double leading slashes stripped, internal double kept
+        self.assertEqual(str(api("//a//b")), f"{self.BASE}/a//b")
+
+    @httprettified
+    def test_resource_uri_with_params(self):
+        HTTPretty.register_uri(HTTPretty.GET, self.URL)
+        client = Hammock(self.BASE)
+        with mock.patch.object(client._session, "request", wraps=client._session.request) as m:
+            # still uses httpretty, but check url passed
+            client("/sample/path/to/resource").GET(params={"foo": "bar"})
+            # httpretty path includes querystring
+            self.assertTrue(HTTPretty.last_request.path.startswith(self.PATH))
+            self.assertEqual(HTTPretty.last_request.querystring, {"foo": ["bar"]})
+
+
 class TestHammockEdge(unittest.TestCase):
     BASE = "http://localhost:8000"
 

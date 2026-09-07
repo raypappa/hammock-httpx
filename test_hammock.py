@@ -270,6 +270,28 @@ class TestHammockSession(unittest.TestCase):
         child = h.foo
         self.assertEqual(child.custom, "value")
 
+    def test_custom_session_kwarg(self):
+        import requests
+
+        sess = requests.Session()
+        sess.headers.update({"X-Sess": "1"})
+        api = Hammock(self.BASE, session=sess)
+        self.assertIs(api._session, sess)
+        # chaining shares the same session
+        self.assertIs(api.foo._session, sess)
+        self.assertIs(api.foo.bar._session, sess)
+        # kwargs still applied to provided session
+        sess2 = requests.Session()
+        api2 = Hammock(self.BASE, session=sess2, headers={"X-New": "2"})
+        self.assertIs(api2._session, sess2)
+        self.assertEqual(api2._session.headers.get("X-New"), "2")
+        # request uses the custom session
+        with mock.patch.object(sess, "request") as m:
+            m.return_value = mock.Mock(status_code=200)
+            api.foo.GET()
+            m.assert_called_once()
+            self.assertEqual(m.call_args[0][1], f"{self.BASE}/foo")
+
 
 class TestResourceUri(unittest.TestCase):
     """PR #13: allow resource URIs with leading/trailing slashes"""

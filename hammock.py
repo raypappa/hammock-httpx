@@ -36,6 +36,7 @@ class Hammock:
         name: str | None = None,
         parent: Hammock | None = None,
         append_slash: bool = False,
+        session: Session | None = None,
         **kwargs: t.Any,
     ) -> None:
         """Constructor
@@ -44,12 +45,13 @@ class Hammock:
             name -- name of node
             parent -- parent node for chaining
             append_slash -- flag if you want a trailing slash in urls
+            session -- existing ``requests.Session`` to use (e.g. OAuth session); if None a new session is created
             **kwargs -- ``requests`` session attributes to initiate with if available
         """
         self._name = name
         self._parent = parent
         self._append_slash = append_slash
-        self._session = requests.session()
+        self._session = session if session is not None else requests.session()
         for k, v in kwargs.items():
             orig = getattr(self._session, k)  # Let it throw exception if unknown
             if isinstance(orig, dict):

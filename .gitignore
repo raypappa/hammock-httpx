@@ -25,3 +25,13 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
+
+# uv / venv
+.venv
+.python-version
+
+# mypy / ruff / pytest
+.mypy_cache
+.ruff_cache
+.pytest_cache
+__pycache__

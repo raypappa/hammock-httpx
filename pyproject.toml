@@ -1,0 +1,77 @@
+[project]
+name = "hammock"
+version = "0.2.4"
+description = "rest like a boss"
+readme = "README.rst"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "Kadir Pekel", email = "kadirpekel@gmail.com" },
+]
+maintainers = [
+    { name = "Kadir Pekel", email = "kadirpekel@gmail.com" },
+]
+keywords = ["rest", "api", "requests", "http"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "requests>=1.1.0",
+]
+urls = { Homepage = "https://github.com/kadirpekel/hammock" }
+
+[project.optional-dependencies]
+dev = [
+    "httpretty>=1.0",
+    "pytest>=7",
+    "pytest-httpretty",
+    "mypy",
+    "ruff",
+]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["hammock"]
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+python_files = ["test_*.py"]
+addopts = "-v"
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+strict = false
+
+[dependency-groups]
+dev = [
+    "httpretty>=1.1.4",
+    "pytest>=7",
+    "mypy>=1.0",
+    "ruff>=0.8",
+]
+
+[tool.uv]
+default-groups = ["dev"]

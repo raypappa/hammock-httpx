@@ -345,6 +345,25 @@ class TestResourceUri(unittest.TestCase):
             self.assertTrue(HTTPretty.last_request.path.startswith(self.PATH))
             self.assertEqual(HTTPretty.last_request.querystring, {"foo": ["bar"]})
 
+    def test_pr16_leading_slash_stripped_via_spawn(self):
+        # PR #16: remove leading slash from the name
+        api = Hammock(self.BASE)
+        # direct _spawn with leading slash
+        child = api._spawn("/foo")
+        self.assertEqual(child._name, "foo")
+        self.assertEqual(str(child), f"{self.BASE}/foo")
+        # trailing also stripped
+        child2 = api._spawn("bar/")
+        self.assertEqual(child2._name, "bar")
+        # both
+        child3 = api._spawn("/baz/")
+        self.assertEqual(child3._name, "baz")
+        # non-string still handled (int) - _chain converts to str before _spawn
+        # but direct spawn with int would not be stripped (not str case)
+        # ensure call interface strips correctly
+        self.assertEqual(str(api("/foo")), f"{self.BASE}/foo")
+        self.assertEqual(str(api("/foo/")), f"{self.BASE}/foo")
+
 
 class TestHammockEdge(unittest.TestCase):
     BASE = "http://localhost:8000"

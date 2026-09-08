@@ -51,7 +51,7 @@ where = ["src"]
 hammock = ["py.typed"]
 
 [tool.pytest.ini_options]
-testpaths = ["."]
+testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-v"
 asyncio_mode = "auto"

@@ -7,7 +7,7 @@ from urllib.parse import urljoin
 
 import httpx
 
-from ._types import HammockRequestKwargs, PathPart, Unpack
+from ._types import HammockRequestKwargs, HttpxClientKwargs, PathPart, Unpack
 from .base import HammockBase
 
 if t.TYPE_CHECKING:
@@ -62,7 +62,7 @@ class AsyncHammock(HammockBase):
         append_slash: bool = False,
         session: AsyncClient | None = None,  # type: ignore[name-defined]
         client: AsyncClient | None = None,  # type: ignore[name-defined]
-        **kwargs: t.Any,
+        **kwargs: Unpack[HttpxClientKwargs],
     ) -> None:
         self._name = name
         self._parent = parent  # type: ignore[assignment]
@@ -101,7 +101,7 @@ class AsyncHammock(HammockBase):
                         ) from exc2
         else:
             try:
-                self._client = httpx.AsyncClient(**kwargs)
+                self._client = httpx.AsyncClient(**kwargs)  # type: ignore[arg-type]
             except TypeError as exc:
                 raise AttributeError(str(exc)) from exc
             self._session = self._client

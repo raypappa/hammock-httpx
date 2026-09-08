@@ -7,7 +7,7 @@ from urllib.parse import urljoin
 
 import httpx
 
-from ._types import HammockRequestKwargs, PathPart, Unpack
+from ._types import HammockRequestKwargs, HttpxClientKwargs, PathPart, Unpack
 from .base import HammockBase
 
 if t.TYPE_CHECKING:
@@ -43,10 +43,10 @@ class Hammock(HammockBase):
         append_slash: bool = False,
         session: Client | None = None,
         client: Client | None = None,
-        **kwargs: t.Any,
+        **kwargs: Unpack[HttpxClientKwargs],
     ) -> None:
         self._name = name
-        self._parent = parent
+        self._parent = parent  # type: ignore[assignment]
         self._append_slash = append_slash
         _client = client if client is not None else session
         if _client is not None:
@@ -82,7 +82,7 @@ class Hammock(HammockBase):
                         ) from exc2
         else:
             try:
-                self._client = httpx.Client(**kwargs)
+                self._client = httpx.Client(**kwargs)  # type: ignore[arg-type]
             except TypeError as exc:
                 raise AttributeError(str(exc)) from exc
             self._session = self._client

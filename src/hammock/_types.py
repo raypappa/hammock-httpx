@@ -10,20 +10,24 @@ is checked instead of ``**kwargs: Any``.
 
 from __future__ import annotations
 
+import ssl
 import typing as t
 
 from httpx._types import (  # type: ignore[attr-defined]
     AuthTypes,
+    CertTypes,
     CookieTypes,
     HeaderTypes,
+    ProxyTypes,
     QueryParamTypes,
     RequestContent,
     RequestData,
     RequestExtensions,
     RequestFiles,
     TimeoutTypes,
+    URLTypes,
 )
-from typing_extensions import Unpack  # type: ignore[import-not-found]
+from typing_extensions import Self, Unpack  # type: ignore[import-not-found]
 
 # Path part is any object that can be str()'d; keep permissive but not Any
 PathPart = t.Union[str, bytes, int, float, bool]
@@ -47,4 +51,28 @@ class HammockRequestKwargs(t.TypedDict, total=False):
     allow_redirects: bool | None  # legacy alias -> follow_redirects
 
 
-__all__ = ["HammockRequestKwargs", "PathPart", "Unpack"]
+class HttpxClientKwargs(t.TypedDict, total=False):
+    """Kwargs accepted by httpx.Client / AsyncClient (forwarded by Hammock.__init__)."""
+
+    auth: AuthTypes | None
+    params: QueryParamTypes | None
+    headers: HeaderTypes | None
+    cookies: CookieTypes | None
+    verify: ssl.SSLContext | str | bool | None
+    cert: CertTypes | None
+    trust_env: bool | None
+    http1: bool | None
+    http2: bool | None
+    proxy: ProxyTypes | None
+    timeout: TimeoutTypes | None
+    follow_redirects: bool | None
+    max_redirects: int | None
+    base_url: URLTypes | None
+    mounts: t.Mapping[str, t.Any | None] | None
+    limits: t.Any | None  # httpx.Limits
+    event_hooks: t.Mapping[str, list[t.Any]] | None
+    transport: t.Any | None  # BaseTransport
+    default_encoding: str | t.Callable[[bytes], str] | None
+
+
+__all__ = ["HammockRequestKwargs", "HttpxClientKwargs", "PathPart", "Self", "Unpack"]

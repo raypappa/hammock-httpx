@@ -58,21 +58,21 @@ class HttpxClientKwargs(t.TypedDict, total=False):
     params: QueryParamTypes | None
     headers: HeaderTypes | None
     cookies: CookieTypes | None
-    verify: ssl.SSLContext | str | bool | None
+    verify: ssl.SSLContext | str | bool
     cert: CertTypes | None
-    trust_env: bool | None
-    http1: bool | None
-    http2: bool | None
+    trust_env: bool
+    http1: bool
+    http2: bool
     proxy: ProxyTypes | None
-    timeout: TimeoutTypes | None
-    follow_redirects: bool | None
-    max_redirects: int | None
-    base_url: URLTypes | None
+    timeout: TimeoutTypes
+    follow_redirects: bool
+    max_redirects: int
+    base_url: URLTypes
     mounts: t.Mapping[str, t.Any | None] | None
-    limits: t.Any | None  # httpx.Limits
+    limits: t.Any  # httpx.Limits
     event_hooks: t.Mapping[str, list[t.Any]] | None
     transport: t.Any | None  # BaseTransport
-    default_encoding: str | t.Callable[[bytes], str] | None
+    default_encoding: str | t.Callable[[bytes], str]
 
 
 __all__ = ["HammockRequestKwargs", "HttpxClientKwargs", "PathPart", "Self", "Unpack"]

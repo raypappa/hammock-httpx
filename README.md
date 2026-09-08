@@ -23,7 +23,7 @@ Hammock lets you turn any REST API into a dead-simple programmatic API by mappin
 
 * **Chainable URL building** — `api.users("foo").posts("bar").comments.GET()` → `http://.../users/foo/posts/bar/comments`
 * **Sync + Async** — `Hammock` (`httpx.Client`) and `AsyncHammock` (`httpx.AsyncClient`)
-* **Typed** — PEP 561 `py.typed`, `mypy` clean, supports `3.9+`
+* **Typed** — PEP 561 `py.typed`, `ty` + `ruff` clean, supports `3.9+`
 * **All verbs** — `GET HEAD OPTIONS POST PUT PATCH DELETE TRACE CONNECT QUERY` (QUERY per [RFC 10008](https://www.rfc-editor.org/rfc/rfc10008.html))
 * **Resource URIs** — `api("/api/v1/users/4711/")` correctly strips leading/trailing `/` (no `//`)
 * **Custom sessions** — inject your own `httpx.Client`/`AsyncClient` (OAuth, custom transports)
@@ -227,12 +227,12 @@ src/hammock/
 ```bash
 uv sync                  # create .venv, install dev deps
 uv run pytest -q         # 47 tests (sync + async, httpretty + mocks)
-uv run mypy -p hammock   # types (src layout)
+uv run ty check          # types (src layout, configured via [tool.ty.src])
 uv run ruff check src/hammock
 uv build                 # wheel + sdist
 ```
 
-Dev deps: `httpretty`, `pytest`, `pytest-asyncio`, `mypy`, `ruff`.
+Dev deps: `httpretty`, `pytest`, `pytest-asyncio`, `ty`, `ruff`.
 
 ## Contributors
 

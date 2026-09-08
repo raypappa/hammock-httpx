@@ -36,7 +36,7 @@ dev = [
     "httpretty>=1.0",
     "pytest>=7",
     "pytest-httpretty",
-    "mypy",
+    "ty",
     "ruff",
 ]
 
@@ -63,21 +63,23 @@ target-version = "py39"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
 
-[tool.mypy]
-python_version = "3.10"
-warn_return_any = true
-warn_unused_configs = true
-ignore_missing_imports = true
-strict = false
-mypy_path = "src"
+[tool.ty.environment]
+python-version = "3.10"
+
+[tool.ty.src]
+include = ["src"]
+# exclude tests from default `ty check` (run `ty check src` for src-only or `ty check test_hammock.py` explicitly)
+exclude = ["test_hammock.py", "tests/**"]
 
 [dependency-groups]
 dev = [
     "httpretty>=1.1.4",
     "pytest>=7",
-    "mypy>=1.0",
     "ruff>=0.8",
     "pytest-asyncio>=1.2.0",
+    "pytest-cov>=7.1.0",
+    "coverage>=7.10.7",
+    "ty>=0.0.79",
 ]
 
 [tool.uv]

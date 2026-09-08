@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 import typing as t
 
-from ._types import PathPart, Self
+from ._types import PathPart, Self  # Self re-exported for subclasses
 
 __all__ = ["HammockBase"]
 
@@ -28,7 +28,7 @@ class HammockBase:
 
     # attributes set by subclasses
     _name: str | None = None  # type: ignore[assignment]
-    _parent: Self | None = None  # type: ignore[valid-type]
+    _parent: t.Any = None
     _append_slash: bool = False
 
     def _spawn(self, name: str) -> Self:

@@ -160,6 +160,7 @@ version = "0.2.4"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
+    { name = "typing-extensions" },
 ]
 
 [package.optional-dependencies]
@@ -193,6 +194,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7" },
     { name = "pytest-httpretty", marker = "extra == 'dev'" },
     { name = "ruff", marker = "extra == 'dev'" },
+    { name = "typing-extensions", specifier = ">=4.8" },
 ]
 provides-extras = ["dev"]
 

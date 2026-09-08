@@ -7,6 +7,7 @@ from urllib.parse import urljoin
 
 import httpx
 
+from ._types import HammockRequestKwargs, PathPart, Unpack
 from .base import HammockBase
 
 if t.TYPE_CHECKING:
@@ -23,16 +24,36 @@ class AsyncHammock(HammockBase):
 
     if t.TYPE_CHECKING:
 
-        def GET(self, *args: t.Any, **kwargs: t.Any) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
-        def HEAD(self, *args: t.Any, **kwargs: t.Any) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
-        def OPTIONS(self, *args: t.Any, **kwargs: t.Any) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
-        def POST(self, *args: t.Any, **kwargs: t.Any) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
-        def PUT(self, *args: t.Any, **kwargs: t.Any) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
-        def PATCH(self, *args: t.Any, **kwargs: t.Any) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
-        def DELETE(self, *args: t.Any, **kwargs: t.Any) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
-        def TRACE(self, *args: t.Any, **kwargs: t.Any) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
-        def CONNECT(self, *args: t.Any, **kwargs: t.Any) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
-        def QUERY(self, *args: t.Any, **kwargs: t.Any) -> t.Awaitable[httpx.Response]: ...  # noqa: N802  # RFC 10008
+        def GET(
+            self, *path: PathPart, **kwargs: Unpack[HammockRequestKwargs]
+        ) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
+        def HEAD(
+            self, *path: PathPart, **kwargs: Unpack[HammockRequestKwargs]
+        ) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
+        def OPTIONS(
+            self, *path: PathPart, **kwargs: Unpack[HammockRequestKwargs]
+        ) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
+        def POST(
+            self, *path: PathPart, **kwargs: Unpack[HammockRequestKwargs]
+        ) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
+        def PUT(
+            self, *path: PathPart, **kwargs: Unpack[HammockRequestKwargs]
+        ) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
+        def PATCH(
+            self, *path: PathPart, **kwargs: Unpack[HammockRequestKwargs]
+        ) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
+        def DELETE(
+            self, *path: PathPart, **kwargs: Unpack[HammockRequestKwargs]
+        ) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
+        def TRACE(
+            self, *path: PathPart, **kwargs: Unpack[HammockRequestKwargs]
+        ) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
+        def CONNECT(
+            self, *path: PathPart, **kwargs: Unpack[HammockRequestKwargs]
+        ) -> t.Awaitable[httpx.Response]: ...  # noqa: N802
+        def QUERY(
+            self, *path: PathPart, **kwargs: Unpack[HammockRequestKwargs]
+        ) -> t.Awaitable[httpx.Response]: ...  # noqa: N802  # RFC 10008
 
     def __init__(
         self,
@@ -101,22 +122,21 @@ class AsyncHammock(HammockBase):
         except Exception:
             pass
 
-    async def _request(self, method: str, *args: t.Any, **kwargs: t.Any) -> httpx.Response:
-        follow_redirects: bool | None = None
-        if "follow_redirects" in kwargs:
-            follow_redirects = kwargs.pop("follow_redirects")
-        if "allow_redirects" in kwargs:
-            allow = kwargs.pop("allow_redirects")
-            if follow_redirects is None:
-                follow_redirects = bool(allow)
+    async def _request(
+        self, method: str, *path: PathPart, **kwargs: Unpack[HammockRequestKwargs]
+    ) -> httpx.Response:
+        follow_redirects: bool | None = kwargs.pop("follow_redirects", None)  # type: ignore[attr-defined]
+        allow_redirects = kwargs.pop("allow_redirects", None)  # type: ignore[attr-defined]
+        if allow_redirects is not None and follow_redirects is None:
+            follow_redirects = bool(allow_redirects)
         if follow_redirects is None:
             follow_redirects = True
 
-        url = self._url(*args)
+        url = self._url(*path)
         if not follow_redirects:
-            return await self._client.request(method, url, follow_redirects=False, **kwargs)
+            return await self._client.request(method, url, follow_redirects=False, **kwargs)  # type: ignore  # pyright: ignore[reportCallIssue]
 
-        resp = await self._client.request(method, url, follow_redirects=False, **kwargs)
+        resp = await self._client.request(method, url, follow_redirects=False, **kwargs)  # type: ignore  # pyright: ignore[reportCallIssue]
         redirect_codes = (301, 302, 303, 307, 308)
         max_redirects = getattr(self._client, "max_redirects", 20)
         count = 0
@@ -126,13 +146,13 @@ class AsyncHammock(HammockBase):
                 break
             if resp.status_code == 303:
                 method = "get"
-                kwargs.pop("data", None)
-                kwargs.pop("json", None)
-                kwargs.pop("content", None)
-                kwargs.pop("files", None)
+                kwargs.pop("data", None)  # type: ignore[attr-defined]
+                kwargs.pop("json", None)  # type: ignore[attr-defined]
+                kwargs.pop("content", None)  # type: ignore[attr-defined]
+                kwargs.pop("files", None)  # type: ignore[attr-defined]
             next_url = urljoin(getattr(resp, "url", None) and str(resp.url) or url, location)
             url = next_url
-            resp = await self._client.request(method, url, follow_redirects=False, **kwargs)
+            resp = await self._client.request(method, url, follow_redirects=False, **kwargs)  # type: ignore  # pyright: ignore[reportCallIssue]
             count += 1
         return resp
 
@@ -147,8 +167,10 @@ class AsyncHammock(HammockBase):
 
 
 def _bind_async_method(method: str) -> t.Callable[..., t.Awaitable[httpx.Response]]:
-    async def aux(hammock: AsyncHammock, *args: t.Any, **kwargs: t.Any) -> httpx.Response:
-        return await hammock._request(method, *args, **kwargs)
+    async def aux(
+        hammock: AsyncHammock, *path: PathPart, **kwargs: Unpack[HammockRequestKwargs]
+    ) -> httpx.Response:
+        return await hammock._request(method, *path, **kwargs)
 
     aux.__name__ = method.upper()
     return aux

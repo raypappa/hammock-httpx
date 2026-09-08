@@ -5,6 +5,8 @@ from __future__ import annotations
 import copy
 import typing as t
 
+from ._types import PathPart
+
 __all__ = ["HammockBase"]
 
 
@@ -50,19 +52,19 @@ class HammockBase:
                 yield current
             current = current._parent  # type: ignore[attr-defined]
 
-    def _chain(self, *args: t.Any) -> t.Any:
+    def _chain(self, *path: PathPart) -> t.Any:
         chain: t.Any = self
-        for arg in args:
+        for arg in path:
             chain = chain._spawn(str(arg))
         return chain
 
-    def __call__(self, *args: t.Any) -> t.Any:
-        return self._chain(*args)
+    def __call__(self, *path: PathPart) -> t.Any:
+        return self._chain(*path)
 
-    def _url(self, *args: t.Any) -> str:
+    def _url(self, *path: PathPart) -> str:
         path_comps: list[str] = [
             c._name
-            for c in self._chain(*args)
+            for c in self._chain(*path)
             if c._name is not None  # type: ignore[attr-defined,misc]
         ]
         url: str = "/".join(reversed(path_comps))

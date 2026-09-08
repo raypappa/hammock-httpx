@@ -9,7 +9,9 @@
 |_| |_\_____|_|_|_|_|_|_|\___/ \____)_| \_)
 ```
 
-> Rest like a boss — chainable, typed wrapper over [httpx](https://www.python-httpx.org/) for REST. Fork of `kadirpekel/hammock` modernized to `httpx` + async + `src` layout.
+> Rest like a boss — chainable, typed wrapper over [httpx](https://www.python-httpx.org/) for REST.
+
+> **Fork notice**: This is a fork of [`kadirpekel/hammock`](https://github.com/kadirpekel/hammock.git) (original by Kadir Pekel). It was refactored with AI assistance to modernize the codebase to `httpx` and address several long-standing issues and PRs: `requests` → `httpx`, fully typed (`py.typed`, `Self`/`Unpack`, `HttpxClientKwargs`/`HammockRequestKwargs`), sync `Hammock` + async `AsyncHammock`, `QUERY` ([RFC 10008](https://www.rfc-editor.org/rfc/rfc10008.html)) + `TRACE`/`CONNECT`, resource-URI slash stripping ([PR #13](https://github.com/kadirpekel/hammock/pull/13)/[#16](https://github.com/kadirpekel/hammock/pull/16)), custom `session`/`client` injection ([#14](https://github.com/kadirpekel/hammock/pull/14)), redirect verb preservation ([#21](https://github.com/kadirpekel/hammock/issues/21)), `src` layout, `uv`/`pyproject.toml`, and expanded tests.
 
 > **Distribution**: `hammock-httpx` on PyPI, **import** remains `import hammock` / `from hammock import Hammock` for backwards compat.
 

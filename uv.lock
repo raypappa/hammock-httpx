@@ -155,7 +155,7 @@ wheels = [
 ]
 
 [[package]]
-name = "hammock"
+name = "hammock-httpx"
 version = "0.2.4"
 source = { editable = "." }
 dependencies = [

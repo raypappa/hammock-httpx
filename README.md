@@ -1,4 +1,4 @@
-# Hammock
+# hammock-httpx
 
 ```
  _                                   _
@@ -9,7 +9,9 @@
 |_| |_\_____|_|_|_|_|_|_|\___/ \____)_| \_)
 ```
 
-> Rest like a boss — chainable, typed wrapper over [httpx](https://www.python-httpx.org/) for REST.
+> Rest like a boss — chainable, typed wrapper over [httpx](https://www.python-httpx.org/) for REST. Fork of `kadirpekel/hammock` modernized to `httpx` + async + `src` layout.
+
+> **Distribution**: `hammock-httpx` on PyPI, **import** remains `import hammock` / `from hammock import Hammock` for backwards compat.
 
 Hammock lets you turn any REST API into a dead-simple programmatic API by mapping URL segments to Python attributes and calls. No manual string formatting, full reuse of base URLs, sync **and** async.
 
@@ -30,17 +32,19 @@ Hammock lets you turn any REST API into a dead-simple programmatic API by mappin
 ## Install
 
 ```bash
-# pip
-pip install hammock
+# pip (new distribution name)
+pip install hammock-httpx
+# import stays compatible:
+# import hammock; from hammock import Hammock, AsyncHammock
 
 # uv
-uv add hammock
+uv add hammock-httpx
 
 # from source (uv)
 uv sync
 ```
 
-Requires Python `>=3.9` and `httpx>=0.27`.
+Requires Python `>=3.9` and `httpx>=0.27`. Import package is still `hammock` (`src/hammock`).
 
 ## Quickstart — GitHub API
 

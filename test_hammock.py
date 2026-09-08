@@ -1,12 +1,10 @@
 import unittest
 from unittest import mock
 
-from httpretty import HTTPretty
-from httpretty import httprettified
-
 import pytest
+from httpretty import HTTPretty, httprettified
 
-from hammock import AsyncHammock, Hammock, bind_method
+from hammock import AsyncHammock, Hammock
 
 
 class TestCaseWrest(unittest.TestCase):

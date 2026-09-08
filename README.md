@@ -74,10 +74,12 @@ Same with **async**:
 import asyncio
 from hammock import AsyncHammock
 
+
 async def main():
     async with AsyncHammock("https://api.github.com") as github:
         resp = await github.repos("kadirpekel", "hammock").watchers.GET()
         print(resp.json())
+
 
 asyncio.run(main())
 ```
@@ -132,7 +134,7 @@ jira = hammock.Hammock(
     auth=("user", "pass"),
 )
 
-issue = jira.issue("JRA-9").GET()                          # auth reused
+issue = jira.issue("JRA-9").GET()  # auth reused
 watched = jira.issue("JRA-9").watchers.POST(params={"name": "user"})
 print(watched)
 
@@ -154,8 +156,8 @@ assert api.foo._client is api.bar._client is api._session
 Close when done (or use context manager for async):
 
 ```python
-api._close_session()          # sync
-await api.close()             # async
+api._close_session()  # sync
+await api.close()  # async
 async with AsyncHammock("...") as api:
     ...
 ```

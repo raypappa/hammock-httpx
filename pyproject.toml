@@ -1,15 +1,15 @@
 [project]
 name = "hammock-httpx"
-version = "0.3.0"
+version = "0.3.1"
 description = "rest like a boss — httpx edition"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [
-    { name = "Kadir Pekel", email = "kadirpekel@gmail.com" },
+    { name = "Craig Davis", email = "181794460+raypappa@users.noreply.github.com" },
 ]
 maintainers = [
-    { name = "Kadir Pekel", email = "kadirpekel@gmail.com" },
+    { name = "Craig Davis", email = "181794460+raypappa@users.noreply.github.com" },
 ]
 keywords = ["rest", "api", "httpx", "http", "async"]
 classifiers = [
@@ -29,7 +29,7 @@ dependencies = [
     "httpx>=0.27",
     "typing-extensions>=4.8",
 ]
-urls = { Homepage = "https://github.com/kadirpekel/hammock" }
+urls = { Homepage = "https://github.com/raypappa/hammock-httpx" }
 
 [project.optional-dependencies]
 dev = [
